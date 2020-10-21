@@ -1,13 +1,42 @@
 - name: 60-extendroot.yml
   hosts: localhost
-  # vars:
-  #         config_variables: azconfig.yml
-  #         config_mount_point: /mnt
-
-  # vars_files:
-  #         - "{{ config_mount_point + '/' + config_variables }}"
   tasks:
-    - name: extend the root filesystem
-      command: xfs_growfs /
+    - name: ensure sgx_utils are installed
+      yum:
+        name: sg3_utils
+        state: present
 
-    
+    - name: Get a sg device name associated with boot lun id
+      shell: sg_scan -i | grep "lun=0$" | head -1 | awk '{print $1}' | sed 's/.$//'
+      register: sg_device_id
+
+    - name: Get scsi device id mapped to above sg device
+      shell: sg_map -sd | grep "{{sg_device_id.stdout}} " | awk '{print $2}'
+      register: scsi_device_id
+      when: sg_device_id.stdout != ""
+
+    - name: Check the last partition on the scsi device
+      shell: lsblk {{scsi_device_id.stdout}}| awk '{print $7}'|tail -1
+      register: last_partition
+      when:
+        - sg_device_id.stdout != ""
+        - scsi_device_id.stdout != ""
+
+    - name: Count of partitions on the scsi disk
+     # shell: grep -c '{{scsi_device_id.stdout|regex_replace('\/dev\/', '')}}[0-9]' /proc/partitions
+      shell: lsblk {{scsi_device_id.stdout}} | awk '{print $6  $7}'| grep part | wc -l
+      register: partition_count
+      when:
+        - sg_device_id.stdout != ""
+        - scsi_device_id.stdout != ""
+
+    - name: Expand the root partition
+      include_tasks: root_filesystem_expansion.yml
+      when:
+        - sg_device_id.stdout != ""
+        - scsi_device_id.stdout != ""
+        - last_partition.stdout == "/"
+
+    - debug:
+        msg: "The root filesystem cannot be expanded as its not the last partition on the boot volume"
+      when: last_partition.stdout != "/"

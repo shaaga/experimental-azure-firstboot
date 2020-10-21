@@ -1,0 +1,8 @@
+- name: Expand the root partition
+  shell: parted {{scsi_device_id.stdout}} resizepart {{partition_count.stdout}} 100%
+- name: Update the partition table and expand the root filesystem
+  shell: "{{item}}"
+  with_items:
+    - partprobe
+    - xfs_growfs -d /
+  ignore_errors: True
