@@ -47,8 +47,8 @@ if [ -f "${CONFIG_FILE}" -a -d ${PB_DIR} ]; then
    popd
 
    if test "$errors"; then
-       rm ${CONFIG_DIR}/workload_sucess_is_true
-       > ${CONFIG_DIR}/workload_sucess_is_false
+       rm ${CONFIG_DIR}/workload_success_is_true
+       > ${CONFIG_DIR}/workload_success_is_false
        {
            echo "The following setup playbooks terminated with errors."
            echo "Format: <playbook> <ansible exit code> <log file under configLUN/log and /var/log/firstboot>"
@@ -56,23 +56,23 @@ if [ -f "${CONFIG_FILE}" -a -d ${PB_DIR} ]; then
                echo "$i"
            done
            echo ;
-       } | tee -a ${LOCAL_LOG_FILE} ${CONFIG_DIR}/workload_sucess_is_false
+       } | tee -a ${LOCAL_LOG_FILE} ${CONFIG_DIR}/workload_success_is_false
        rc=1
    else
-       > ${CONFIG_DIR}/workload_sucess_is_true
-       rm ${CONFIG_DIR}/workload_sucess_is_false
+       > ${CONFIG_DIR}/workload_success_is_true
+       rm ${CONFIG_DIR}/workload_success_is_false
        {
            echo "############################################"
            echo "# Successfully applied all setup playbooks #"
            echo "############################################"
            echo ;
-       } | tee -a ${LOCAL_LOG_FILE} ${CONFIG_DIR}/workload_sucess_is_true
+       } | tee -a ${LOCAL_LOG_FILE} ${CONFIG_DIR}/workload_success_is_true
        rc=0
    fi
 else
-    rm ${CONFIG_DIR}/workload_sucess_is_true
-    > ${CONFIG_DIR}/workload_sucess_is_false
-    echo "No Configuration found" | tee -a /var/log/firstboot/status.log ${CONFIG_DIR}/workload_sucess_is_false
+    rm ${CONFIG_DIR}/workload_success_is_true
+    > ${CONFIG_DIR}/workload_success_is_false
+    echo "No Configuration found" | tee -a /var/log/firstboot/status.log ${CONFIG_DIR}/workload_success_is_false
     rc=2
 fi
 
