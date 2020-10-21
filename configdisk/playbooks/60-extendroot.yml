@@ -1,20 +1,24 @@
+# This playbook extends the root filesystem mounted on the last partition of the boot lun on the host system
 - name: 60-extendroot.yml
   hosts: localhost
   tasks:
+    # Ensure sg3_utils are installed on the system otherwise there is no use to continue
     - name: ensure sgx_utils are installed
       yum:
         name: sg3_utils
         state: present
-
+    # Find one of the sg device ids associated with lun id zero, which the boot lun's id
     - name: Get a sg device name associated with boot lun id
       shell: sg_scan -i | grep "lun=0$" | head -1 | awk '{print $1}' | sed 's/.$//'
       register: sg_device_id
 
-    - name: Get scsi device id mapped to above sg device
+    # Get the scsi device id corresponding to the above sg device id
+    - name: Get scsi device id mapped to the sg device
       shell: sg_map -sd | grep "{{sg_device_id.stdout}} " | awk '{print $2}'
       register: scsi_device_id
       when: sg_device_id.stdout != ""
 
+    # Check what is the last partition on the boot lun, proceed only if the last partition is mounted on /
     - name: Check the last partition on the scsi device
       shell: lsblk {{scsi_device_id.stdout}}| awk '{print $7}'|tail -1
       register: last_partition
@@ -22,6 +26,7 @@
         - sg_device_id.stdout != ""
         - scsi_device_id.stdout != ""
 
+    # Get the count of the total number of partitions present on the boot lun
     - name: Count of partitions on the scsi disk
      # shell: grep -c '{{scsi_device_id.stdout|regex_replace('\/dev\/', '')}}[0-9]' /proc/partitions
       shell: lsblk {{scsi_device_id.stdout}} | awk '{print $6  $7}'| grep part | wc -l
@@ -30,6 +35,7 @@
         - sg_device_id.stdout != ""
         - scsi_device_id.stdout != ""
 
+      # Proceed with root filesystem expansion when the last partition is mounted on / 
     - name: Expand the root partition
       include_tasks: root_filesystem_expansion.yml
       when:

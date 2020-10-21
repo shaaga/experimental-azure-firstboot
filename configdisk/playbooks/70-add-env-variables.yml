@@ -1,3 +1,4 @@
+# This playbook is used to create new environment variables on the host system
 - name: 70-add-env-variables
   hosts: localhost
   vars:
@@ -8,6 +9,7 @@
           - "{{ config_mount_point + '/' + config_variables }}"
 
   tasks:
+    # Add the new env variables' entries in the shell's bashrc script
     - name: Add env variables in the bashrc file
       lineinfile:
         path: /root/.bashrc
@@ -15,5 +17,6 @@
       when: item.name == 'HOST'
       with_items:
         - {name: 'HOST'}
+    # Execute the bashrc script to create the env variables
     - name: Execute the bashrc script
       shell: source /root/.bashrc
