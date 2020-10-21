@@ -14,22 +14,30 @@
     append: yes
     group: "{{ item.group.name if item.group is defined else omit }}"
 
-- name: request password change on first login
-  command: passwd -e {{ item.username }}
-  when: item.require_password_change | d(false)
-
 - name: add authorized key
   authorized_key:
     user: "{{ item.username }}"
     key: "{{ item['ssh-key'] }}"
   when: item['ssh-key'] is defined
 
+# The below task creates .ssh directory if not already created for a user in its home directory
+
+- name: create .ssh directory in the home folder for the user
+  file:
+    path: "{{ '/root/.ssh' if item.username=='root' else
+           (item.home_dir | d('/home/' + item.username ) ) + '/.ssh' }}"
+    state: directory
+    mode: 0700
+    owner: "{{ item.username }}"
+    group: "{{ item.group.name if item.group is defined else item.username }}"
+  when: item['ssh-private-key'] is defined
+
 - name: add private key
   copy:
     remote_src: yes
     src: "{{ config_mount_point + '/' + item['ssh-private-key'] }}"
     dest: "{{ '/root/.ssh/' if item.username=='root' else
-           (item.home_dir | d('/home/' + item.username ) ) + '/.ssh' }}"
+           (item.home_dir | d('/home/' + item.username ) ) + '/.ssh/' }}"
     mode: 0600
     owner: "{{ item.username }}"
     group: "{{ item.group.name if item.group is defined else item.username }}"
